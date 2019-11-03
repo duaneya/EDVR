@@ -15,7 +15,7 @@ import utils.util as util  # noqa: E402
 
 
 def main():
-    dataset = 'DIV2K_demo'  # vimeo90K | REDS | general (e.g., DIV2K, 291) | DIV2K_demo |test
+    dataset = 'AI_4K'  # vimeo90K | REDS | general (e.g., DIV2K, 291) | DIV2K_demo |test
     mode = 'GT'  # used for vimeo90k and REDS datasets
     # vimeo90k: GT | LR | flow
     # REDS: train_sharp, train_sharp_bicubic, train_blur_bicubic, train_blur, train_blur_comp
@@ -30,6 +30,9 @@ def main():
         opt['lmdb_save_path'] = '../../datasets/DIV2K/DIV2K800_sub.lmdb'
         opt['name'] = 'DIV2K800_sub_GT'
         general_image_folder(opt)
+    elif dataset == 'AI_4K':
+        AI_4K('gt')
+        AI_4K('input')
     elif dataset == 'DIV2K_demo':
         opt = {}
         ## GT
@@ -44,6 +47,86 @@ def main():
         general_image_folder(opt)
     elif dataset == 'test':
         test_lmdb('../../datasets/REDS/train_sharp_wval.lmdb', 'REDS')
+
+def AI_4K(mode):
+
+    '''create lmdb for the REDS dataset, each image with fixed size
+    GT: [3, 2160, 3840], key: 000000_000000
+    LR: [3, 540, 960], key: 000000_000000
+    key: 000000_00000
+    ** 记得前面我们的数据结构吗？{子目录名}_{图片名}
+    '''
+    mode = mode                                                                     # ** 数据模式: input / gt
+    read_all_imgs = False  # whether real all images to the memory. Set False with limited memory
+    BATCH = 500           # After BATCH images, lmdb commits, if read_all_imgs = False
+    
+    if mode == 'input':
+        img_folder = '/mnt/sdb/duan/EDVR/datasets/AI_4K/val/input'                                 # ** 使用相对路径指向我们的数据集的input
+        lmdb_save_path = '/mnt/sdb/duan/EDVR/datasets/AI_4K/train_input_wval.lmdb'                   # ** 待会生成的lmdb文件存储的路径
+        '''原来使用全局路径，我们使用相对路径'''
+        H_dst, W_dst = 540, 960                                                     # 帧的大小：H，W
+ 
+    elif mode == 'gt':
+        img_folder = '/mnt/sdb/duan/EDVR/datasets/AI_4K/train/gt'                                    # ** 使用相对路径指向我们的数据集的input
+        lmdb_save_path = '/mnt/sdb/duan/EDVR/datasets/AI_4K/train_gt_wval.lmdb'                      # ** 待会生成的lmdb文件存储的路径
+        '''原来使用全局路径，我们使用相对路径'''
+        H_dst, W_dst = 2160, 3840                                                     # 帧的大小：H，W
+    
+    ########################################################
+    if not lmdb_save_path.endswith('.lmdb'):
+        raise ValueError("lmdb_save_path must end with \'lmdb\'.")                  # 保存格式必须以“.lmdb”结尾
+    #### whether the lmdb file exist
+    if osp.exists(lmdb_save_path):
+        print('Folder [{:s}] already exists. Exit...'.format(lmdb_save_path))       # 文件是否已经存在
+        sys.exit(1)
+ 
+    #### read all the image paths to a list
+    print('Reading image path list ...')
+    all_img_list = data_util._get_paths_from_images(img_folder)                     # 获取input/gt下所有帧的完整路径名，作为list
+    keys = []
+    for img_path in all_img_list:
+        split_rlt = img_path.split('/')
+        # 取子文件夹名 xxxxxx
+        a = split_rlt[-2]
+        # 取帧的名字，出去文件后缀 xxxxxx
+        b = split_rlt[-1].split('.jpg')[0]                                          # ** 我们的图像是".jpg"结尾的
+        keys.append(a + '_' + b)
+ 
+    #### create lmdb environment
+    data_size_per_img = cv2.imread(all_img_list[0], cv2.IMREAD_UNCHANGED).nbytes    # 每帧图像大小（byte为单位）
+
+    print('data size per image is: ', data_size_per_img)
+    data_size = data_size_per_img * len(all_img_list)                               # 总的需要多少空间
+    env = lmdb.open(lmdb_save_path, map_size=data_size * 10)                        # 索取这么多的比特数
+ 
+    #### write data to lmdb
+    pbar = util.ProgressBar(len(all_img_list))
+    txn = env.begin(write=True)
+    idx = 1
+    for path, key in zip(all_img_list, keys):
+        idx = idx + 1
+        pbar.update('Write {}'.format(key))
+        key_byte = key.encode('ascii')
+        
+        data = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        H, W, C = data.shape  # fixed shape
+        assert H == H_dst and W == W_dst and C == 3, 'different shape.'
+        txn.put(key_byte, data)
+        if not read_all_imgs and idx % BATCH == 1:
+            txn.commit()
+            txn = env.begin(write=True)
+    txn.commit()
+    env.close()
+    print('Finish writing lmdb.')
+ 
+    #### create meta information                                                    # 存储元数据：名字（str）+分辨率（str）
+    meta_info = {}
+    meta_info['name'] = 'OURS_{}_wval'.format(mode)                                 # ** 现在的数据集是OURS了
+
+    meta_info['resolution'] = '{}_{}_{}'.format(3, H_dst, W_dst)
+    meta_info['keys'] = keys
+    pickle.dump(meta_info, open(osp.join(lmdb_save_path, 'meta_info.pkl'), "wb"))
+    print('Finish creating lmdb meta info.')
 
 
 def read_image_worker(path, key):
@@ -405,6 +488,7 @@ def test_lmdb(dataroot, dataset='REDS'):
     C, H, W = [int(s) for s in meta_info['resolution'].split('_')]
     img = img_flat.reshape(H, W, C)
     cv2.imwrite('test.png', img)
+
 
 
 if __name__ == "__main__":

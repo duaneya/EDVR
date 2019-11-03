@@ -125,7 +125,7 @@ def main():
         else:
             raise NotImplementedError('Phase [{:s}] is not recognized.'.format(phase))
     assert train_loader is not None
-
+    print('now create model')
     #### create model
     model = create_model(opt)
 
