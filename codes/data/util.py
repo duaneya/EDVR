@@ -29,6 +29,7 @@ def _get_paths_from_images(path):
                 img_path = os.path.join(dirpath, fname)
                 images.append(img_path)
     assert images, '{:s} has no valid image file'.format(path)
+
     return images
 
 
@@ -75,10 +76,12 @@ def _read_img_lmdb(env, key, size):
 def read_img(env, path, size=None):
     """read image by cv2 or from lmdb
     return: Numpy float32, HWC, BGR, [0,1]"""
+
     if env is None:  # img
         img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     else:
         img = _read_img_lmdb(env, path, size)
+    
     img = img.astype(np.float32) / 255.
     if img.ndim == 2:
         img = np.expand_dims(img, axis=2)

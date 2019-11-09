@@ -48,8 +48,10 @@ class VideoTestDataset(data.Dataset):
                 self.data_info['border'].extend(border_l)
 
                 if self.cache_data:
+                    
                     self.imgs_LQ[subfolder_name] = util.read_img_seq(img_paths_LQ)
-                    self.imgs_GT[subfolder_name] = util.read_img_seq(img_paths_GT)
+                    #print(self.imgs_LQ)
+                    self.imgs_GT[subfolder_name] = self.imgs_LQ[subfolder_name] #util.read_img_seq(img_paths_GT)
         elif opt['name'].lower() in ['vimeo90k-test']:
             pass  # TODO
         else:

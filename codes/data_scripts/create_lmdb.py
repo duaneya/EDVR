@@ -33,6 +33,7 @@ def main():
     elif dataset == 'AI_4K':
         AI_4K('gt')
         AI_4K('input')
+      #  AI_4K('test')
     elif dataset == 'DIV2K_demo':
         opt = {}
         ## GT
@@ -58,7 +59,7 @@ def AI_4K(mode):
     '''
     mode = mode                                                                     # ** 数据模式: input / gt
     read_all_imgs = False  # whether real all images to the memory. Set False with limited memory
-    BATCH = 500           # After BATCH images, lmdb commits, if read_all_imgs = False
+    BATCH = 100           # After BATCH images, lmdb commits, if read_all_imgs = False
     
     if mode == 'input':
         img_folder = '/mnt/sdb/duan/EDVR/datasets/AI_4K/val/input'                                 # ** 使用相对路径指向我们的数据集的input
@@ -71,6 +72,12 @@ def AI_4K(mode):
         lmdb_save_path = '/mnt/sdb/duan/EDVR/datasets/AI_4K/train_gt_wval.lmdb'                      # ** 待会生成的lmdb文件存储的路径
         '''原来使用全局路径，我们使用相对路径'''
         H_dst, W_dst = 2160, 3840                                                     # 帧的大小：H，W
+    elif mode == 'test':
+        img_folder = '/mnt/sdb/duan/EDVR/datasets/AI_4K/test/gt'                                 # ** 使用相对路径指向我们的数据集的input
+        lmdb_save_path = '/mnt/sdb/duan/EDVR/datasets/AI_4K/test_gt_wval.lmdb'                   # ** 待会生成的lmdb文件存储的路径
+        '''原来使用全局路径，我们使用相对路径'''
+        H_dst, W_dst = 2160, 3840 
+
     
     ########################################################
     if not lmdb_save_path.endswith('.lmdb'):
@@ -89,7 +96,7 @@ def AI_4K(mode):
         # 取子文件夹名 xxxxxx
         a = split_rlt[-2]
         # 取帧的名字，出去文件后缀 xxxxxx
-        b = split_rlt[-1].split('.jpg')[0]                                          # ** 我们的图像是".jpg"结尾的
+        b = split_rlt[-1].split('.png')[0]                                          # ** 我们的图像是".jpg"结尾的
         keys.append(a + '_' + b)
  
     #### create lmdb environment

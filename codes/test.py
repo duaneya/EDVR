@@ -9,7 +9,7 @@ import utils.util as util
 from data.util import bgr2ycbcr
 from data import create_dataset, create_dataloader
 from models import create_model
-
+import os
 #### options
 parser = argparse.ArgumentParser()
 parser.add_argument('-opt', type=str, required=True, help='Path to options YMAL file.')
@@ -27,6 +27,7 @@ logger.info(option.dict2str(opt))
 #### Create test dataset and dataloader
 test_loaders = []
 for phase, dataset_opt in sorted(opt['datasets'].items()):
+
     test_set = create_dataset(dataset_opt)
     test_loader = create_dataloader(test_set, dataset_opt)
     logger.info('Number of test images in [{:s}]: {:d}'.format(dataset_opt['name'], len(test_set)))
@@ -47,22 +48,27 @@ for test_loader in test_loaders:
     test_results['ssim_y'] = []
 
     for data in test_loader:
-        need_GT = False if test_loader.dataset.opt['dataroot_GT'] is None else True
+        need_GT = False# if test_loader.dataset.opt['dataroot_GT'] is None else True
         model.feed_data(data, need_GT=need_GT)
-        img_path = data['GT_path'][0] if need_GT else data['LQ_path'][0]
-        img_name = osp.splitext(osp.basename(img_path))[0]
 
+        img_path = data['folder'][0]
+        img_name = data['idx'][0].split('/')[0].zfill(2)
+        dataset_dir_tmp = osp.join(dataset_dir,img_path)
+        print(dataset_dir_tmp)
         model.test()
         visuals = model.get_current_visuals(need_GT=need_GT)
 
         sr_img = util.tensor2img(visuals['rlt'])  # uint8
 
+
         # save images
         suffix = opt['suffix']
         if suffix:
-            save_img_path = osp.join(dataset_dir, img_name + suffix + '.png')
+            save_img_path = osp.join(dataset_dir_tmp, img_name + suffix + '.png')
         else:
-            save_img_path = osp.join(dataset_dir, img_name + '.png')
+            save_img_path = osp.join(dataset_dir_tmp, img_name + '.png')
+        if not os.path.exists(dataset_dir_tmp):
+            os.makedirs(dataset_dir_tmp)
         util.save_img(sr_img, save_img_path)
 
         # calculate PSNR and SSIM

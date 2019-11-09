@@ -44,7 +44,7 @@ network_G:
 path:
   pretrain_model_G: ~
   strict_load: true
-  resume_state: ~
+  resume_state: /mnt/sdb/duan/EDVR/experiments/001_my/training_state/6000.state
 
 #### training settings: learning rate scheme, loss
 train:
