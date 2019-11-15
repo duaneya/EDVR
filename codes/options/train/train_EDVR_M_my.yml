@@ -1,5 +1,5 @@
 #### general settings
-name: 001_my
+name: 002_my
 use_tb_logger: true
 model: video_base
 distortion: sr
@@ -14,8 +14,9 @@ datasets:
     interval_list: [1]
     random_reverse: false
     border_mode: false
-    dataroot_GT: /mnt/sdb/duan/EDVR/datasets/AI_4K/train_gt_wval.lmdb
-    dataroot_LQ: /mnt/sdb/duan/EDVR/datasets/AI_4K/train_input_wval.lmdb
+    dataroot_GT: /mnt/sdb/duan/EDVR/datasets/AI_4K/train/gt
+    dataroot_LQ: /mnt/sdb/duan/EDVR/datasets/AI_4K/train/input
+    # data_type: img
     cache_keys: meta_info.pkl
 
     N_frames: 5
@@ -23,7 +24,7 @@ datasets:
     n_workers: 3  # per GPU
     batch_size: 64
     GT_size: 256
-    LQ_size: 32
+    LQ_size: 64
     use_flip: true
     use_rot: true
     color: RGB
@@ -44,7 +45,7 @@ network_G:
 path:
   pretrain_model_G: ~
   strict_load: true
-  resume_state: /mnt/sdb/duan/EDVR/experiments/001_my/training_state/6000.state
+  resume_state: ~
 
 #### training settings: learning rate scheme, loss
 train:

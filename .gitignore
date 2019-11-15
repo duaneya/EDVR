@@ -1,5 +1,4 @@
 experiments/*
-results/*
 tb_logger/*
 .vscode
 
@@ -118,4 +117,3 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-tb_logger/

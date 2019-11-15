@@ -15,6 +15,48 @@ from data import create_dataloader, create_dataset
 from models import create_model
 
 
+
+class data_prefetcher():
+    def __init__(self, loader):
+        self.loader = iter(loader)
+        self.stream = torch.cuda.Stream()
+        # self.mean = torch.tensor([0.485 * 255, 0.456 * 255, 0.406 * 255]).cuda().view(1,3,1,1)
+        # self.std = torch.tensor([0.229 * 255, 0.224 * 255, 0.225 * 255]).cuda().view(1,3,1,1)
+        # With Amp, it isn't necessary to manually convert data to half.
+        # if args.fp16:
+        #     self.mean = self.mean.half()
+        #     self.std = self.std.half()
+        self.preload()
+
+    def preload(self):
+        try:
+            self.next_data = next(self.loader)
+        except StopIteration:
+            self.next_data = None
+            return
+        with torch.cuda.stream(self.stream):
+            self.next_data['LQs'] = self.next_data['LQs'].cuda(non_blocking=True)
+            self.next_data['GT'] = self.next_data['GT'].cuda(non_blocking=True)
+            # self.next_target = self.next_target.cuda(non_blocking=True)
+            # With Amp, it isn't necessary to manually convert data to half.
+            # if args.fp16:
+            #     self.next_input = self.next_input.half()
+            # else:
+            self.next_data['LQs'] = self.next_data['LQs'].float()
+            self.next_data['GT'] = self.next_data['GT'].float()
+            # self.next_data[0] = self.next_data[0].float()
+            # self.next_input = self.next_input.sub_(self.mean).div_(self.std)
+    def next(self):
+        torch.cuda.current_stream().wait_stream(self.stream)
+        data = self.next_data
+        if data is not None:
+            data['LQs'].record_stream(torch.cuda.current_stream())
+            data['GT'].record_stream(torch.cuda.current_stream())
+        self.preload()
+        return data
+
+
+
 def init_dist(backend='nccl', **kwargs):
     """initialization for distributed training"""
     if mp.get_start_method(allow_none=True) != 'spawn':
@@ -146,7 +188,14 @@ def main():
     for epoch in range(start_epoch, total_epochs + 1):
         if opt['dist']:
             train_sampler.set_epoch(epoch)
-        for _, train_data in enumerate(train_loader):
+        
+        prefetcher = data_prefetcher(train_loader)
+        train_data = prefetcher.next()
+
+        while train_data:
+            
+        # for _, train_data in enumerate(train_loader):
+
             current_step += 1
             if current_step > total_iters:
                 break
@@ -298,6 +347,8 @@ def main():
                     logger.info('Saving models and training states.')
                     model.save(current_step)
                     model.save_training_state(epoch, current_step)
+        train_data = prefetcher.next()
+    
 
     if rank <= 0:
         logger.info('Saving the final model.')
@@ -307,4 +358,6 @@ def main():
 
 
 if __name__ == '__main__':
+    # import cProfile
+    # cProfile.run('main()')
     main()

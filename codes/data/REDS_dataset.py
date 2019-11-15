@@ -63,10 +63,10 @@ class REDSDataset(data.Dataset):
         self.paths_GT = pickle.load(open('./data/{}'.format(cache_keys), 'rb'))["keys"] 
 
         # remove the REDS4 for testing
-        self.paths_GT = [
-            v for v in self.paths_GT if v.split('_')[0] not in ['000', '011', '015', '020']
-        ]
-        assert self.paths_GT, 'Error: GT path is empty.'
+        # self.paths_GT = [
+        #     v for v in self.paths_GT if v.split('_')[0] not in ['000', '011', '015', '020']
+        # ]
+        # assert self.paths_GT, 'Error: GT path is empty.'
 
         if self.data_type == 'lmdb':
             self.GT_env, self.LQ_env = None, None

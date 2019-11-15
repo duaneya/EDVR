@@ -80,4 +80,5 @@ def videotopic(vpath, ppath):
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    videotopic('/mnt/sdb/duan/EDVR/codes/data_scripts/16536366.mp4','test_videotopic')

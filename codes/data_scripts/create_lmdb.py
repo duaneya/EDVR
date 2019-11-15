@@ -59,7 +59,7 @@ def AI_4K(mode):
     '''
     mode = mode                                                                     # ** 数据模式: input / gt
     read_all_imgs = False  # whether real all images to the memory. Set False with limited memory
-    BATCH = 100           # After BATCH images, lmdb commits, if read_all_imgs = False
+    BATCH = 500           # After BATCH images, lmdb commits, if read_all_imgs = False
     
     if mode == 'input':
         img_folder = '/mnt/sdb/duan/EDVR/datasets/AI_4K/val/input'                                 # ** 使用相对路径指向我们的数据集的input
